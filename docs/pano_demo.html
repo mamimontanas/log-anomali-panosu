@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gözcü — Log Anomali İzleme Panosu (Demo)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --mist:#E8EDF1;      /* sayfa zemini */
+    --paper:#F8FAFB;     /* yüzey */
+    --ink:#12303F;       /* metin */
+    --slate:#46606E;     /* ikincil metin */
+    --line:#C9D5DC;      /* çizgiler */
+    --ok:#7FA9B3;        /* başarılı giriş */
+    --calm:#1F7A6D;      /* bilgi */
+    --warn:#B87700;      /* dikkat */
+    --alarm:#C8283D;     /* acil / başarısız */
+    --display:"Bricolage Grotesque","Trebuchet MS",system-ui,sans-serif;
+    --body:"Figtree","Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--mist);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.55}
+  [hidden]{display:none!important}
+  button{font:inherit;color:inherit;cursor:pointer}
+  :focus-visible{outline:3px solid #2B6FD6;outline-offset:2px}
+
+  /* ---------- GİRİŞ ---------- */
+  #login{min-height:100vh;display:grid;grid-template-columns:1.15fr 1fr}
+  .l-left{padding:56px 64px;display:flex;flex-direction:column;justify-content:space-between;
+    background:var(--paper);border-right:1px solid var(--line)}
+  .wordmark{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-.02em}
+  .l-left h1{font-family:var(--display);font-weight:700;font-size:clamp(38px,5vw,64px);
+    line-height:1.02;letter-spacing:-.03em;margin:0 0 20px;max-width:12ch}
+  .l-left p{margin:0;max-width:44ch;color:var(--slate);font-size:17px}
+  .l-strip{display:block;width:100%;height:auto;max-width:520px}
+  .l-right{display:flex;align-items:center;justify-content:center;padding:40px}
+  .form{width:100%;max-width:340px}
+  .form h2{font-family:var(--display);font-size:24px;margin:0 0 24px;letter-spacing:-.01em}
+  .form label{display:block;font-weight:600;font-size:13px;margin:16px 0 6px}
+  .form input,.form select{width:100%;padding:11px 12px;font:inherit;color:var(--ink);
+    background:var(--paper);border:1.5px solid var(--line);border-radius:6px}
+  .form input:focus,.form select:focus{border-color:var(--ink);outline:none;box-shadow:0 0 0 3px rgba(18,48,63,.15)}
+  .go{width:100%;margin-top:28px;padding:13px;border:0;border-radius:6px;background:var(--ink);
+    color:#fff;font-weight:600;font-size:15px}
+  .go:hover{background:#0b2230}
+  .form small{display:block;margin-top:16px;color:var(--slate);font-size:12.5px}
+
+  /* ---------- PANO ---------- */
+  #dash{display:grid;grid-template-columns:230px 1fr;min-height:100vh}
+  .rail{background:var(--paper);border-right:1px solid var(--line);padding:28px 20px;
+    display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+  .rail .wordmark{font-size:24px}
+  .rail .sub{color:var(--slate);font-size:13px;margin:2px 0 32px}
+  .rail nav{display:flex;flex-direction:column;gap:2px}
+  .rail nav a{padding:9px 12px;border-radius:6px;color:var(--ink);text-decoration:none;font-weight:500}
+  .rail nav a:hover{background:var(--mist)}
+  .rail nav a[aria-current="page"]{background:var(--ink);color:#fff}
+  .rail .who{margin-top:auto;border-top:1px solid var(--line);padding-top:16px;font-size:13px}
+  .rail .who b{display:block;font-size:14px}
+  .rail .who span{color:var(--slate)}
+  .logout{margin-top:12px;background:none;border:1.5px solid var(--line);border-radius:6px;padding:7px 12px;width:100%}
+  .logout:hover{border-color:var(--ink)}
+
+  main{padding:44px 48px 64px;max-width:1080px;width:100%}
+  .hero h1{font-family:var(--display);font-weight:700;font-size:clamp(32px,4.4vw,52px);
+    line-height:1.05;letter-spacing:-.03em;margin:0 0 14px;max-width:18ch}
+  .hero h1.calm{color:var(--calm)}
+  .hero h1.alarm{color:var(--ink)}
+  .hero p{margin:0;max-width:62ch;color:var(--slate);font-size:17px}
+  .hero p strong{color:var(--ink)}
+
+  section{margin-top:44px}
+  h2.sec{font-family:var(--display);font-size:21px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px}
+  .hint{margin:0 0 16px;color:var(--slate);font-size:13.5px}
+
+  /* Grafik */
+  .chartbox{background:var(--paper);border:1px solid var(--line);border-radius:4px;padding:14px 14px 12px}
+  svg.pulse{display:block;width:100%;height:auto;overflow:visible}
+  .s,.f{transform-box:fill-box;animation:grow .7s cubic-bezier(.2,.7,.2,1) both}
+  .s{transform-origin:50% 100%} .f{transform-origin:50% 0}
+  @keyframes grow{from{transform:scaleY(0)}}
+  .hit{fill:transparent;cursor:pointer}
+  .hit:hover{fill:rgba(18,48,63,.05)}
+  .hit.sel{fill:rgba(18,48,63,.09)}
+  .flag{cursor:pointer}
+  .flag:focus-visible{outline:none}
+  .flag:focus-visible circle{stroke:#2B6FD6;stroke-width:3}
+  .axis{font-size:11px;fill:var(--slate);font-family:var(--body)}
+  .readout{margin:10px 2px 0;min-height:24px;font-size:14px}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 22px;margin:10px 2px 0;font-size:13px;color:var(--slate)}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+
+  /* Uyarılar */
+  .alerts{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+  .alert{border-bottom:1px solid var(--line);border-left:5px solid var(--c);background:var(--paper)}
+  .alert.acil{--c:var(--alarm)} .alert.dikkat{--c:var(--warn)} .alert.bilgi{--c:var(--calm)}
+  .alert.on{background:#fff}
+  .ah{width:100%;display:grid;grid-template-columns:78px 54px 1fr auto;gap:14px;align-items:baseline;
+    text-align:left;background:none;border:0;padding:16px 18px}
+  .ah:hover{background:rgba(18,48,63,.03)}
+  .sev{font-weight:700;color:var(--c)}
+  .when{font-variant-numeric:tabular-nums;color:var(--slate)}
+  .what b{display:block;font-weight:600}
+  .what span{color:var(--slate)}
+  .ip{font-variant-numeric:tabular-nums;color:var(--slate);font-size:13.5px}
+  .ab{padding:0 18px 18px 164px;color:var(--ink);max-width:880px}
+  .ab p{margin:0 0 8px}
+  .ab .do{font-weight:600}
+
+  /* Tablo */
+  .tw{overflow-x:auto;background:var(--paper);border:1px solid var(--line);border-radius:4px}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:560px}
+  th{text-align:left;font-weight:600;color:var(--slate);font-size:13px;padding:11px 16px;border-bottom:1px solid var(--line)}
+  td{padding:11px 16px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  tr:last-child td{border-bottom:0}
+  .res{font-weight:600}
+  .res.k{color:var(--alarm)} .res.b{color:var(--calm)}
+  .res::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;background:currentColor;margin-right:8px}
+
+  .foot{margin-top:44px;color:var(--slate);font-size:13px;border-top:1px solid var(--line);padding-top:14px}
+
+  @media(max-width:860px){
+    #login{grid-template-columns:1fr}
+    .l-left{padding:32px 24px;gap:32px;border-right:0;border-bottom:1px solid var(--line)}
+    .l-strip{display:none}
+    #dash{grid-template-columns:1fr}
+    .rail{position:static;height:auto;flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:14px 18px}
+    .rail .sub,.rail .who span{display:none}
+    .rail .sub{margin:0}
+    .rail nav{flex-direction:row;flex-wrap:wrap}
+    .rail .who{margin:0 0 0 auto;border:0;padding:0;display:flex;align-items:center;gap:10px}
+    .logout{margin:0;width:auto}
+    main{padding:28px 18px 48px}
+    .ah{grid-template-columns:64px 1fr;row-gap:2px}
+    .ah .when{grid-column:2}.ah .what{grid-column:1 / -1}.ah .ip{grid-column:1 / -1}
+    .ab{padding:0 18px 18px}
+  }
+  @media(prefers-reduced-motion:reduce){.s,.f{animation:none}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+
+<!-- ============ GİRİŞ ============ -->
+<div id="login">
+  <div class="l-left">
+    <div class="wordmark">Gözcü</div>
+    <div>
+      <h1>Şüpheli girişi büyümeden yakalayın.</h1>
+      <p>Sunucu ve uygulama günlüklerinizdeki hatalı, alışılmadık ve zamansız girişleri tek ekranda izleyin.</p>
+    </div>
+    <svg class="l-strip" viewBox="0 0 520 90" aria-hidden="true">
+      <g fill="#7FA9B3">
+        <rect x="6" y="38" width="12" height="12"/><rect x="28" y="30" width="12" height="20"/><rect x="50" y="20" width="12" height="30"/>
+        <rect x="72" y="8" width="12" height="42"/><rect x="94" y="14" width="12" height="36"/><rect x="116" y="24" width="12" height="26"/>
+        <rect x="138" y="12" width="12" height="38"/><rect x="160" y="6" width="12" height="44"/><rect x="182" y="16" width="12" height="34"/>
+        <rect x="204" y="26" width="12" height="24"/><rect x="226" y="36" width="12" height="14"/><rect x="248" y="40" width="12" height="10"/>
+        <rect x="270" y="30" width="12" height="20"/><rect x="292" y="18" width="12" height="32"/><rect x="314" y="10" width="12" height="40"/>
+        <rect x="336" y="16" width="12" height="34"/><rect x="358" y="28" width="12" height="22"/><rect x="380" y="34" width="12" height="16"/>
+        <rect x="402" y="40" width="12" height="10"/><rect x="424" y="44" width="12" height="6"/><rect x="446" y="42" width="12" height="8"/>
+        <rect x="468" y="46" width="12" height="4"/><rect x="490" y="46" width="12" height="4"/>
+      </g>
+      <g fill="#C8283D">
+        <rect x="50" y="52" width="12" height="8"/><rect x="72" y="52" width="12" height="34"/><rect x="204" y="52" width="12" height="6"/>
+        <rect x="314" y="52" width="12" height="14"/><rect x="424" y="52" width="12" height="4"/>
+      </g>
+      <line x1="0" y1="51" x2="520" y2="51" stroke="#12303F" stroke-width="1.5"/>
+    </svg>
+  </div>
+  <div class="l-right">
+    <div class="form" role="form" aria-labelledby="gt">
+      <h2 id="gt">Şirket hesabınızla giriş yapın</h2>
+      <label for="firmaSec">Şirket</label>
+      <select id="firmaSec">
+        <option value="A">Mavi Lojistik A.Ş.</option>
+        <option value="B">Yeşil Gıda Ltd.</option>
+      </select>
+      <label for="kadi">Kullanıcı adı</label>
+      <input id="kadi" value="yonetici_demo" autocomplete="off">
+      <label for="parola">Parola</label>
+      <input id="parola" type="password" value="demo1234">
+      <button class="go" id="girisBtn">Giriş yap</button>
+      <small>Demo sürümü: alanlar hazır dolu, doğrudan giriş yapabilirsiniz.</small>
+    </div>
+  </div>
+</div>
+
+<!-- ============ PANO ============ -->
+<div id="dash" hidden>
+  <aside class="rail">
+    <div>
+      <div class="wordmark">Gözcü</div>
+      <div class="sub">Log anomali izleme</div>
+    </div>
+    <nav aria-label="Ana menü">
+      <a href="#ozet" aria-current="page">Pano</a>
+      <a href="#uyarilar">Uyarılar</a>
+      <a href="#girisler">Giriş kayıtları</a>
+      <a href="#kurallar" id="kurallarLink">Kurallar</a>
+    </nav>
+    <div class="who">
+      <b id="firmaAd"></b>
+      <span>yonetici_demo</span>
+      <button class="logout" id="cikisBtn">Oturumu kapat</button>
+    </div>
+  </aside>
+
+  <main>
+    <div class="hero" id="ozet">
+      <h1 id="baslik"></h1>
+      <p id="ozetMetin"></p>
+    </div>
+
+    <section aria-labelledby="gunT">
+      <h2 class="sec" id="gunT">Son 24 saat</h2>
+      <p class="hint">Bir saate dokunarak o saatin ayrıntısını görün. Başarısız girişler çizginin altında, kendi ölçeğiyle gösterilir.</p>
+      <div class="chartbox">
+        <svg class="pulse" id="chart" viewBox="0 0 960 260" role="img" aria-label="Saatlik başarılı ve başarısız giriş grafiği"></svg>
+        <p class="readout" id="readout" aria-live="polite"></p>
+        <div class="legend">
+          <span><i style="background:var(--ok)"></i>Başarılı giriş</span>
+          <span><i style="background:var(--alarm)"></i>Başarısız giriş</span>
+          <span><i style="background:var(--ink);border-radius:50%"></i>Uyarı işareti</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="uyarilar" aria-labelledby="uyT">
+      <h2 class="sec" id="uyT">Uyarılar</h2>
+      <p class="hint">Kurallarınıza takılan olaylar. Ayrıntı için satırı açın.</p>
+      <ul class="alerts" id="alertList"></ul>
+    </section>
+
+    <section id="girisler" aria-labelledby="gT">
+      <h2 class="sec" id="gT">Son giriş kayıtları</h2>
+      <p class="hint">En yeni kayıt en üstte.</p>
+      <div class="tw">
+        <table>
+          <thead><tr><th>Zaman</th><th>IP adresi</th><th>Kullanıcı</th><th>Kaynak</th><th>Sonuç</th></tr></thead>
+          <tbody id="logBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="kurallar"></section>
+    <p class="foot">Bu ekran bir tasarım prototipidir. Gösterilen tüm veriler sentetik örnek verilerdir; gerçek kişi veya kuruma ait değildir.</p>
+  </main>
+</div>
+
+<script>
+/* ---- Sentetik örnek veriler (gerçek kişisel veri yok) ---- */
+const VERI = {
+  A: {
+    ad: "Mavi Lojistik A.Ş.",
+    basarili:[2,1,0,0,1,3,9,22,41,48,39,35,30,33,37,40,34,26,14,8,5,4,3,2],
+    basarisiz:[0,0,5,12,1,0,1,2,3,14,2,8,1,1,2,1,2,1,0,0,1,0,0,1],
+    uyarilar:[
+      {onem:"acil",saat:"09:42",ip:"203.0.113.45",kural:"Çok sayıda başarısız giriş",
+       ozet:"10 dakikada 12 başarısız giriş denemesi",
+       detay:"VPN kaynağından gelen denemelerde 'admin' ve 'root' hesapları tekrar tekrar denendi.",
+       yap:"IP adresini geçici olarak engelleyin ve ilgili hesapların parolalarını sıfırlayın."},
+      {onem:"acil",saat:"03:17",ip:"198.51.100.23",kural:"Başarısızlıktan sonra başarılı giriş",
+       ozet:"12 hatalı denemenin ardından 'admin' hesabıyla başarılı giriş",
+       detay:"Gece saatinde art arda yapılan hatalardan sonra giriş yapıldı. Parola tahmin edilmiş olabilir.",
+       yap:"Oturumu sonlandırın, parolayı değiştirin ve bu hesabın son işlemlerini kontrol edin."},
+      {onem:"dikkat",saat:"02:05",ip:"203.0.113.77",kural:"Mesai dışı giriş",
+       ozet:"Gece 02:05'te alışılmadık giriş",
+       detay:"Bu kullanıcı genellikle 08:00 ile 18:00 arasında giriş yapıyor.",
+       yap:"Kullanıcıya girişin kendisine ait olup olmadığını sorun."},
+      {onem:"dikkat",saat:"11:20",ip:"198.51.100.9",kural:"Çok sayıda kullanıcı adı denemesi",
+       ozet:"Aynı IP'den 8 farklı kullanıcı adı denendi",
+       detay:"Farklı hesaplara tek bir adresten sırayla giriş denendi. Bu bir tarama belirtisi olabilir.",
+       yap:"IP adresini izleme listesine alın."},
+      {onem:"bilgi",saat:"14:55",ip:"192.0.2.14",kural:"Mesai dışı giriş",
+       ozet:"Hafta sonu girişi",
+       detay:"Giriş başarılı ve kullanıcı tanıdık bir IP adresinden bağlandı.",
+       yap:"Şimdilik işlem gerekmiyor."}
+    ],
+    loglar:[
+      ["14:58:02","192.0.2.31","ayse.k","Web sunucusu","b"],
+      ["14:57:40","203.0.113.45","admin","VPN","k"],
+      ["14:57:38","203.0.113.45","root","VPN","k"],
+      ["14:56:11","192.0.2.18","mehmet.t","Web sunucusu","b"],
+      ["14:55:49","198.51.100.9","test","Web sunucusu","k"],
+      ["14:55:20","192.0.2.14","can.y","Web sunucusu","b"]
+    ]
+  },
+  B: {
+    ad: "Yeşil Gıda Ltd.",
+    basarili:[0,0,0,1,2,6,14,28,36,31,27,24,22,25,26,22,18,10,6,4,2,1,0,0],
+    basarisiz:[0,0,0,0,0,1,1,2,1,2,1,1,0,2,1,1,0,6,0,0,0,0,0,0],
+    uyarilar:[
+      {onem:"dikkat",saat:"17:08",ip:"198.51.100.60",kural:"Çok sayıda başarısız giriş",
+       ozet:"10 dakikada 6 başarısız giriş denemesi",
+       detay:"'depo' hesabına web sunucusundan art arda hatalı parola girildi.",
+       yap:"Hesap sahibine ulaşıp parolayı unutup unutmadığını sorun."},
+      {onem:"bilgi",saat:"06:30",ip:"192.0.2.77",kural:"Mesai dışı giriş",
+       ozet:"Erken saatte giriş",
+       detay:"Giriş başarılı ve tanıdık bir IP adresinden yapıldı.",
+       yap:"Şimdilik işlem gerekmiyor."}
+    ],
+    loglar:[
+      ["14:59:10","192.0.2.40","elif.d","Muhasebe uygulaması","b"],
+      ["14:58:30","192.0.2.52","ali.s","Web sunucusu","b"],
+      ["14:57:02","198.51.100.60","depo","Web sunucusu","k"],
+      ["14:55:00","192.0.2.40","elif.d","Muhasebe uygulaması","b"]
+    ]
+  }
+};
+const ONEM = {acil:"Acil", dikkat:"Dikkat", bilgi:"Bilgi"};
+const RENK = {acil:"#C8283D", dikkat:"#B87700", bilgi:"#1F7A6D"};
+const topla = a => a.reduce((x,y)=>x+y,0);
+const $ = id => document.getElementById(id);
+const hh = n => String(n).padStart(2,"0");
+
+let cur = null, selHour = null;
+
+function giris(k){
+  cur = VERI[k];
+  $("firmaAd").textContent = cur.ad;
+
+  const acil = cur.uyarilar.filter(u=>u.onem==="acil").length;
+  const top = topla(cur.basarili)+topla(cur.basarisiz), fail = topla(cur.basarisiz);
+  const h1 = $("baslik");
+  if(acil>0){ h1.textContent = `${cur.ad} için bugün ${acil} acil uyarı var.`; h1.className="alarm"; }
+  else { h1.textContent = `${cur.ad} için acil bir uyarı yok.`; h1.className="calm"; }
+  $("ozetMetin").innerHTML = `Son 24 saatte <strong>${top} giriş denemesi</strong> yapıldı, <strong>${fail}</strong> tanesi başarısız oldu. ${cur.uyarilar.length} olay kurallarınıza takıldı.`;
+
+  chartCiz();
+  uyarilariCiz();
+  $("logBody").innerHTML = cur.loglar.map(l =>
+    `<tr><td>${l[0]}</td><td>${l[1]}</td><td>${l[2]}</td><td>${l[3]}</td>
+     <td><span class="res ${l[4]}">${l[4]==="b"?"Başarılı":"Başarısız"}</span></td></tr>`).join("");
+
+  $("login").hidden = true;
+  $("dash").hidden = false;
+  window.scrollTo(0,0);
+
+  const ilk = cur.uyarilar.find(u=>u.onem==="acil") || cur.uyarilar[0];
+  saatSec(parseInt(ilk.saat,10));
+}
+
+function chartCiz(){
+  const W=960, H=260, base=140, slot=W/24, bw=22;
+  const maxS = Math.max(...cur.basarili), maxF = Math.max(...cur.basarisiz,1);
+  const hs = v => v/maxS*100, fs = v => v/maxF*80;
+  let s = "";
+  for(let i=0;i<24;i++){
+    s += `<rect class="hit" data-h="${i}" x="${i*slot}" y="0" width="${slot}" height="${H-20}"></rect>`;
+  }
+  s += `<line x1="0" y1="${base}" x2="${W}" y2="${base}" stroke="#12303F" stroke-width="1.5"/>`;
+  for(let i=0;i<24;i++){
+    const x = i*slot+(slot-bw)/2, d = `animation-delay:${i*22}ms`;
+    const a = cur.basarili[i], b = cur.basarisiz[i];
+    if(a>0) s += `<rect class="s" style="${d}" x="${x}" y="${base-hs(a)}" width="${bw}" height="${hs(a)}" fill="#7FA9B3" pointer-events="none"/>`;
+    if(b>0) s += `<rect class="f" style="${d}" x="${x}" y="${base+2}" width="${bw}" height="${fs(b)}" fill="#C8283D" pointer-events="none"/>`;
+    if(i%3===0) s += `<text class="axis" x="${i*slot+slot/2}" y="${H-4}" text-anchor="middle">${hh(i)}:00</text>`;
+  }
+  s += `<text class="axis" x="4" y="14">Başarılı</text><text class="axis" x="4" y="${base+98}">Başarısız</text>`;
+  cur.uyarilar.forEach((u,idx)=>{
+    const h = parseInt(u.saat,10), cx = h*slot+slot/2;
+    s += `<g class="flag" data-a="${idx}" data-h="${h}" tabindex="0" role="button" aria-label="${ONEM[u.onem]} uyarısı, saat ${u.saat}: ${u.kural}">
+      <line x1="${cx}" y1="30" x2="${cx}" y2="${base}" stroke="${RENK[u.onem]}" stroke-width="1.5" stroke-dasharray="3 3"/>
+      <circle cx="${cx}" cy="24" r="9" fill="${RENK[u.onem]}" stroke="#F8FAFB" stroke-width="2"/>
+      <title>${u.saat} · ${u.kural}</title></g>`;
+  });
+  $("chart").innerHTML = s;
+
+  $("chart").querySelectorAll(".hit").forEach(r=> r.addEventListener("click",()=>saatSec(+r.dataset.h)));
+  $("chart").querySelectorAll(".flag").forEach(g=>{
+    const git = ()=>{ saatSec(+g.dataset.h); alertAc(+g.dataset.a, true); };
+    g.addEventListener("click", git);
+    g.addEventListener("keydown", e=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); git(); }});
+  });
+}
+
+function saatSec(h){
+  selHour = h;
+  $("chart").querySelectorAll(".hit").forEach(r=> r.classList.toggle("sel", +r.dataset.h===h));
+  const a = cur.basarili[h], b = cur.basarisiz[h];
+  const uy = cur.uyarilar.filter(u=>parseInt(u.saat,10)===h);
+  let t = `<strong>${hh(h)}:00 ile ${hh((h+1)%24)}:00 arası:</strong> ${a} başarılı, ${b} başarısız giriş.`;
+  if(uy.length) t += ` Bu saatte ${uy.length} uyarı var: ${uy.map(u=>u.kural.toLowerCase()).join(", ")}.`;
+  $("readout").innerHTML = t;
+}
+
+function uyarilariCiz(){
+  $("alertList").innerHTML = cur.uyarilar.map((u,i)=>`
+    <li class="alert ${u.onem}" id="al${i}">
+      <button class="ah" aria-expanded="false" aria-controls="ab${i}" data-i="${i}">
+        <span class="sev">${ONEM[u.onem]}</span>
+        <span class="when">${u.saat}</span>
+        <span class="what"><b>${u.kural}</b><span>${u.ozet}</span></span>
+        <span class="ip">${u.ip}</span>
+      </button>
+      <div class="ab" id="ab${i}" hidden>
+        <p>${u.detay}</p>
+        <p class="do">Önerilen adım: <span style="font-weight:400">${u.yap}</span></p>
+      </div>
+    </li>`).join("");
+  $("alertList").querySelectorAll(".ah").forEach(b=> b.addEventListener("click",()=>{
+    const i = +b.dataset.i;
+    alertAc(i, b.getAttribute("aria-expanded")!=="true");
+    saatSec(parseInt(cur.uyarilar[i].saat,10));
+  }));
+}
+
+function alertAc(i, ac){
+  const li = $("al"+i), b = li.querySelector(".ah"), body = $("ab"+i);
+  b.setAttribute("aria-expanded", ac);
+  body.hidden = !ac;
+  li.classList.toggle("on", ac);
+  if(ac) li.scrollIntoView({block:"nearest", behavior:"smooth"});
+}
+
+$("girisBtn").addEventListener("click", ()=> giris($("firmaSec").value));
+$("cikisBtn").addEventListener("click", ()=>{ $("dash").hidden = true; $("login").hidden = false; window.scrollTo(0,0); });
+$("kurallarLink").addEventListener("click", e=>{
+  e.preventDefault();
+  $("kurallar").innerHTML = '<h2 class="sec">Kurallar</h2><p class="hint">Kural editörü sonraki aşamada eklenecek. Şirket yöneticisi eşik değerlerini buradan ayarlayacak.</p>';
+  $("kurallar").scrollIntoView({behavior:"smooth"});
+});
+</script>
+</body>
+</html>
