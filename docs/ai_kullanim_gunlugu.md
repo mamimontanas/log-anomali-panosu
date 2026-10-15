@@ -81,13 +81,19 @@ log verileri sentetik/örnek verilerdir.
 ## Hafta 4: Veritabanı ve Veri Erişim Katmanı
 
 ### Kayıt 10: Python'dan veritabanına bağlantı
-- **Tarih:** [gerçek tarih]
-- **İstem:** Python'dan SQL Server'a bağlanmak için yardım istedim.
-- **Çıktı:** `app/data/db.py`: bağlantı cümlesini .env dosyasından okuyan fonksiyon.
-- **Benim yaptığım:** ODBC Driver 18'in kurulu olduğunu kontrol ettim, dosyayı oluşturup çalıştırdım ve SQL Server sürüm bilgisini aldım. [get_connection ve load_dotenv ne işe yarıyor, kendi cümlenle yaz.]
+- **İstem:** Python'dan SQL Server'a nasıl bağlanırım?
+- **Çıktı:** db.py dosyası.
+- **Benim yaptığım:** Dosyayı çalıştırdım, SQL Server sürüm bilgisi geldi. [Bu dosya ne işe yarıyor?]
 
-### Kayıt 11: Sentetik veri üretici
-- **Tarih:** [gerçek tarih]
-- **İstem:** Tabloları örnek veriyle doldurmak için script istedim.
-- **Çıktı:** `app/data/seed.py`: 2 şirket, kullanıcılar, kaynaklar, kurallar ve yaklaşık 540 sentetik giriş kaydı.
-- **Benim yaptığım:** Scripti çalıştırdım, SSMS'te sorgularla doğruladım (şirket başına 354 ve 187 kayıt, saldırı IP'leri en üstte). Gerçek kişisel veri kullanılmadı. [Parametreli sorgu (?) ve silme sırasının neden önemli olduğunu kendi cümlenle yaz.]
+### Kayıt 11: Sentetik veri
+- **İstem:** Tabloları örnek veriyle doldurmak istedim.
+- **Çıktı:** seed.py dosyası.
+- **Benim yaptığım:** Çalıştırdım, SSMS'te sorguyla doğruladım: Mavi Lojistik 354, Yeşil Gıda 187 kayıt. [Neden gerçek veri değil sentetik kullandık?]
+
+### Kayıt 12: CRUD ve testler
+- **İstem:** Ekleme, okuma, güncelleme, silme fonksiyonları istedim.
+- **Çıktı:** crud.py ve test_crud.py.
+- **Benim yaptığım:** 6 testin hepsi geçti. [Bir testin ne kontrol ettiğini kendi cümlenle yaz.]
+
+### Kayıt 13: Kendi yazdığım kısıt
+- **Benim yaptığım:** pencere_dk için CHECK kısıtını kendim yazdım. [Ne işe yarıyor?]
