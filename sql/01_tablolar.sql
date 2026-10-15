@@ -133,3 +133,9 @@ FROM INFORMATION_SCHEMA.TABLES
 WHERE TABLE_TYPE = 'BASE TABLE'
 ORDER BY TABLE_NAME;
 GO
+
+/* 9) KISIT: kural zaman penceresi en fazla bir gün (1440 dakika) olabilir.
+      NULL değerler (mesai dışı kuralı gibi) bu kısıttan etkilenmez. */
+ALTER TABLE kural
+ADD CONSTRAINT ck_kural_pencere CHECK (pencere_dk <= 1440);
+GO
