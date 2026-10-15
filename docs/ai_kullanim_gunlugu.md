@@ -78,3 +78,16 @@ log verileri sentetik/örnek verilerdir.
 - Yapay zekâ **öneri ve taslak** üretti, kararları ben verdim (teknoloji seçimi, proje kapsamı).
 - Her çıktıyı çalıştırarak veya inceleyerek doğruladım. Doğrulayamadığım hiçbir şeyi teslim etmedim.
 - Açıklayamadığım kodu projeye koymayacağım.
+## Hafta 4: Veritabanı ve Veri Erişim Katmanı
+
+### Kayıt 10: Python'dan veritabanına bağlantı
+- **Tarih:** [gerçek tarih]
+- **İstem:** Python'dan SQL Server'a bağlanmak için yardım istedim.
+- **Çıktı:** `app/data/db.py`: bağlantı cümlesini .env dosyasından okuyan fonksiyon.
+- **Benim yaptığım:** ODBC Driver 18'in kurulu olduğunu kontrol ettim, dosyayı oluşturup çalıştırdım ve SQL Server sürüm bilgisini aldım. [get_connection ve load_dotenv ne işe yarıyor, kendi cümlenle yaz.]
+
+### Kayıt 11: Sentetik veri üretici
+- **Tarih:** [gerçek tarih]
+- **İstem:** Tabloları örnek veriyle doldurmak için script istedim.
+- **Çıktı:** `app/data/seed.py`: 2 şirket, kullanıcılar, kaynaklar, kurallar ve yaklaşık 540 sentetik giriş kaydı.
+- **Benim yaptığım:** Scripti çalıştırdım, SSMS'te sorgularla doğruladım (şirket başına 354 ve 187 kayıt, saldırı IP'leri en üstte). Gerçek kişisel veri kullanılmadı. [Parametreli sorgu (?) ve silme sırasının neden önemli olduğunu kendi cümlenle yaz.]
