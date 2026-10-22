@@ -6,6 +6,11 @@
 </head>
 <body>
   <h1>Pano</h1>
+
+  {% for mesaj in get_flashed_messages() %}
+    <p><strong>{{ mesaj }}</strong></p>
+  {% endfor %}
+
   <p>Hoş geldin, {{ session.kullanici_adi }} ({{ session.rol }})</p>
 
   <h2>Son giriş kayıtları</h2>
@@ -20,6 +25,7 @@
     <p>Bu şirkete ait log kaydı yok.</p>
   {% endif %}
 
+  {% if session.rol == "yonetici" %}<p><a href="/yonetim">Kural yönetimi</a></p>{% endif %}
   <p><a href="/cikis">Çıkış yap</a></p>
 </body>
 </html>

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head><meta charset="UTF-8"><title>Yönetim - Gözcü</title></head>
+<body>
+  <h1>Kural yönetimi (sadece yönetici)</h1>
+  {% if kurallar %}
+    <ul>
+    {% for k in kurallar %}<li>{{ k.ad }}: eşik {{ k.esik }}, pencere {{ k.pencere_dk }} dk</li>{% endfor %}
+    </ul>
+  {% else %}<p>Bu şirkete ait kural yok.</p>{% endif %}
+  <p><a href="/pano">Panoya dön</a></p>
+</body>
+</html>

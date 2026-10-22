@@ -37,7 +37,8 @@ def test_son_loglar_sadece_kendi_sirketinin(mavi):
 
 
 def test_basarisiz_ozeti_saldirgan_ipleri_bulur(mavi):
-    ozet = crud.basarisiz_giris_ozeti(mavi, dakika=60 * 72, en_az=10)
+    # Pencere 1 yıl: seed verisi ne zaman yüklenmiş olursa olsun içinde kalsın
+    ozet = crud.basarisiz_giris_ozeti(mavi, dakika=60 * 24 * 365, en_az=10)
     ipler = {o["ip_adresi"] for o in ozet}
     assert "203.0.113.45" in ipler
     assert "198.51.100.23" in ipler

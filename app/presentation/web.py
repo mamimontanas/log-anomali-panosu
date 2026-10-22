@@ -68,6 +68,19 @@ def pano():
     return render_template("pano.html", loglar=loglar)
 
 
+@app.route("/yonetim")
+def yonetim():
+    if "kullanici_id" not in session:
+        flash("Önce giriş yapın.")
+        return redirect(url_for("giris"))
+    if session.get("rol") != "yonetici":
+        flash("Yönetici yetkisi gerekiyor.")
+        return redirect(url_for("pano"))
+
+    kurallar = crud.kurallari_getir(session["sirket_id"])
+    return render_template("yonetim.html", kurallar=kurallar)
+
+
 @app.route("/cikis")
 def cikis():
     session.clear()
