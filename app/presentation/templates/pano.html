@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Pano - Gözcü</title>
+</head>
+<body>
+  <h1>Pano</h1>
+  <p>Hoş geldin, {{ session.kullanici_adi }} ({{ session.rol }})</p>
+
+  <h2>Son giriş kayıtları</h2>
+  {% if loglar %}
+    <table border="1" cellpadding="4">
+      <tr><th>Zaman</th><th>IP</th><th>Kullanıcı</th><th>Kaynak</th><th>Durum</th></tr>
+      {% for l in loglar %}
+        <tr><td>{{ l.zaman }}</td><td>{{ l.ip_adresi }}</td><td>{{ l.kullanici_adi }}</td><td>{{ l.kaynak }}</td><td>{{ l.durum }}</td></tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>Bu şirkete ait log kaydı yok.</p>
+  {% endif %}
+
+  <p><a href="/cikis">Çıkış yap</a></p>
+</body>
+</html>

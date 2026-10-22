@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>Giriş - Gözcü</title>
+</head>
+<body>
+  <h1>Giriş</h1>
+
+  {% for mesaj in get_flashed_messages() %}
+    <p><strong>{{ mesaj }}</strong></p>
+  {% endfor %}
+
+  <form method="post">
+    <p><label>Kullanıcı adı<br><input name="kullanici_adi" required></label></p>
+    <p><label>Parola<br><input type="password" name="parola" required></label></p>
+    <button type="submit">Giriş yap</button>
+  </form>
+
+  <p><a href="/kayit">Şirket kaydı</a></p>
+</body>
+</html>
