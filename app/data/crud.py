@@ -159,3 +159,40 @@ def kural_sil(sirket_id, kural_id):
             return cur.execute(sql, kural_id, sirket_id).rowcount
     except pyodbc.IntegrityError:
         raise ValueError("Bu kurala bağlı anomali kayıtları var, silinemez.")
+
+    # ====================== KULLANICI ======================
+
+def sirket_ve_yonetici_ekle(sirket_adi, kullanici_adi, parola_hash):
+    """Yeni şirketi ve yöneticisini AYNI işlemde ekler.
+
+    Biri başarısız olursa ikisi de geri alınır (sahipsiz şirket kalmaz).
+    """
+    try:
+        with _oturum() as cur:
+            sirket_id = cur.execute(
+                "INSERT INTO sirket (ad) OUTPUT INSERTED.id VALUES (?)",
+                sirket_adi).fetchone()[0]
+            cur.execute(
+                "INSERT INTO kullanici (sirket_id, kullanici_adi, parola_hash, rol) "
+                "VALUES (?, ?, ?, 'yonetici')",
+                sirket_id, kullanici_adi, parola_hash)
+            return sirket_id
+    except pyodbc.IntegrityError:
+        raise ValueError("Bu şirket adı veya kullanıcı adı zaten kayıtlı.")
+
+
+def kullanici_getir(kullanici_adi):
+    """Giriş için kullanıcıyı bulur. Yoksa None döndürür.
+
+    Burada sirket_id filtresi yok: giriş yapan kişinin şirketini henüz
+    bilmiyoruz, onu bu sorgu bulacak. kullanici_adi tüm sistemde benzersizdir.
+    """
+    sql = """
+        SELECT id, sirket_id, kullanici_adi, parola_hash, rol
+        FROM kullanici
+        WHERE kullanici_adi = ?
+    """
+    with _oturum() as cur:
+        cur.execute(sql, kullanici_adi)
+        satirlar = _sozluk_listesi(cur)
+    return satirlar[0] if satirlar else None
