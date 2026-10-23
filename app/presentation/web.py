@@ -4,12 +4,14 @@ from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 
 from app.business.auth import parola_dogrula, parola_hashle
+from app.business.log_parser import dosya_ayristir
 from app.data import crud
 
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # en fazla 2 MB dosya
 
 
 @app.route("/")
@@ -76,9 +78,46 @@ def yonetim():
     if session.get("rol") != "yonetici":
         flash("Yönetici yetkisi gerekiyor.")
         return redirect(url_for("pano"))
-
     kurallar = crud.kurallari_getir(session["sirket_id"])
     return render_template("yonetim.html", kurallar=kurallar)
+
+
+@app.route("/log-yukle", methods=["GET", "POST"])
+def log_yukle():
+    if "kullanici_id" not in session:
+        flash("Önce giriş yapın.")
+        return redirect(url_for("giris"))
+
+    sirket_id = session["sirket_id"]
+    hatalar = []
+
+    if request.method == "POST":
+        dosya = request.files.get("dosya")
+        kaynak_id = request.form.get("kaynak_id", "")
+        yeni_kaynak = request.form.get("yeni_kaynak", "").strip()
+
+        if not dosya or not dosya.filename:
+            flash("Bir log dosyası seçin.")
+        elif not dosya.filename.lower().endswith((".log", ".txt")):
+            flash("Yalnızca .log veya .txt dosyası yüklenebilir.")
+        elif not kaynak_id and not yeni_kaynak:
+            flash("Bir kaynak seçin veya yeni kaynak adı yazın.")
+        else:
+            try:
+                icerik = dosya.read().decode("utf-8")
+                if yeni_kaynak:
+                    kaynak_id = crud.kaynak_ekle(sirket_id, yeni_kaynak)
+                kayitlar, hatalar = dosya_ayristir(icerik.splitlines())
+                eklenen, tekrar = crud.loglar_toplu_ekle(sirket_id, int(kaynak_id), kayitlar)
+                flash(f"{eklenen} kayıt eklendi, {tekrar} tekrar kayıt atlandı, "
+                      f"{len(hatalar)} hatalı satır atlandı.")
+            except UnicodeDecodeError:
+                flash("Dosya UTF-8 metin dosyası olmalı.")
+            except ValueError as hata:
+                flash(str(hata))
+
+    kaynaklar = crud.kaynaklari_getir(sirket_id)
+    return render_template("log_yukle.html", kaynaklar=kaynaklar, hatalar=hatalar)
 
 
 @app.route("/cikis")

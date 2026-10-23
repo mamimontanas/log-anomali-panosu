@@ -1,5 +1,5 @@
 """
-Veri erişim katmanı: CRUD fonksiyonları (Hafta 4).
+Veri erişim katmanı: CRUD fonksiyonları.
 
 Temel kural: Her fonksiyon sirket_id alır ve SQL'de sirket_id ile filtreler.
 Böylece bir şirket başka bir şirketin verisini okuyamaz, değiştiremez, silemez.
@@ -160,7 +160,8 @@ def kural_sil(sirket_id, kural_id):
     except pyodbc.IntegrityError:
         raise ValueError("Bu kurala bağlı anomali kayıtları var, silinemez.")
 
-    # ====================== KULLANICI ======================
+
+# ====================== KULLANICI ======================
 
 def sirket_ve_yonetici_ekle(sirket_adi, kullanici_adi, parola_hash):
     """Yeni şirketi ve yöneticisini AYNI işlemde ekler.
@@ -198,7 +199,6 @@ def kullanici_getir(kullanici_adi):
     return satirlar[0] if satirlar else None
 
 
-
 # ====================== KAYNAK VE TOPLU LOG ======================
 
 def kaynaklari_getir(sirket_id):
@@ -217,10 +217,12 @@ def kaynak_ekle(sirket_id, ad, tur=None):
 
 
 def loglar_toplu_ekle(sirket_id, kaynak_id, kayitlar):
-    """Ayrıştırılmış kayıtları TEK işlemde ekler, eklenen sayıyı döndürür.
+    """Ayrıştırılmış kayıtları TEK işlemde ekler.
 
-    Önce kaynağın bu şirkete ait olduğu kontrol edilir.
-    Bir satır bile eklenemezse hiçbiri eklenmez (rollback).
+    İş kuralı: aynı kaynakta aynı zaman + IP + kullanıcı + durum
+    zaten varsa o kayıt tekrar eklenmez (aynı dosya iki kez yüklenirse
+    sahte anomali oluşmasın).
+    Dönen değer: (eklenen_sayisi, atlanan_tekrar_sayisi)
     """
     with _oturum() as cur:
         sahip = cur.execute(
@@ -229,11 +231,28 @@ def loglar_toplu_ekle(sirket_id, kaynak_id, kayitlar):
         if sahip is None:
             raise ValueError("Bu kaynak bu şirkete ait değil.")
         if not kayitlar:
-            return 0
-        cur.executemany(
-            "INSERT INTO log_kaydi "
-            "(sirket_id, kaynak_id, zaman, ip_adresi, kullanici_adi, durum, ham_metin) "
-            "VALUES (?, ?, ?, ?, ?, ?, ?)",
-            [(sirket_id, kaynak_id, k["zaman"], k["ip_adresi"],
-              k["kullanici_adi"], k["durum"], k["ham_metin"]) for k in kayitlar])
-        return len(kayitlar)
+            return 0, 0
+
+        en_eski = min(k["zaman"] for k in kayitlar)
+        en_yeni = max(k["zaman"] for k in kayitlar)
+        cur.execute(
+            "SELECT zaman, ip_adresi, kullanici_adi, durum FROM log_kaydi "
+            "WHERE sirket_id = ? AND kaynak_id = ? AND zaman BETWEEN ? AND ?",
+            sirket_id, kaynak_id, en_eski, en_yeni)
+        mevcut = {tuple(satir) for satir in cur.fetchall()}
+
+        yeniler = []
+        for k in kayitlar:
+            anahtar = (k["zaman"], k["ip_adresi"], k["kullanici_adi"], k["durum"])
+            if anahtar not in mevcut:
+                mevcut.add(anahtar)
+                yeniler.append(k)
+
+        if yeniler:
+            cur.executemany(
+                "INSERT INTO log_kaydi "
+                "(sirket_id, kaynak_id, zaman, ip_adresi, kullanici_adi, durum, ham_metin) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                [(sirket_id, kaynak_id, k["zaman"], k["ip_adresi"],
+                  k["kullanici_adi"], k["durum"], k["ham_metin"]) for k in yeniler])
+        return len(yeniler), len(kayitlar) - len(yeniler)
