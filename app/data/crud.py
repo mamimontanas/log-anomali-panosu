@@ -196,3 +196,44 @@ def kullanici_getir(kullanici_adi):
         cur.execute(sql, kullanici_adi)
         satirlar = _sozluk_listesi(cur)
     return satirlar[0] if satirlar else None
+
+
+
+# ====================== KAYNAK VE TOPLU LOG ======================
+
+def kaynaklari_getir(sirket_id):
+    """Şirketin log kaynaklarını döndürür."""
+    sql = "SELECT id, ad, tur FROM kaynak WHERE sirket_id = ? ORDER BY ad"
+    with _oturum() as cur:
+        cur.execute(sql, sirket_id)
+        return _sozluk_listesi(cur)
+
+
+def kaynak_ekle(sirket_id, ad, tur=None):
+    """Şirkete yeni bir log kaynağı ekler ve id'sini döndürür."""
+    sql = "INSERT INTO kaynak (sirket_id, ad, tur) OUTPUT INSERTED.id VALUES (?, ?, ?)"
+    with _oturum() as cur:
+        return cur.execute(sql, sirket_id, ad, tur).fetchone()[0]
+
+
+def loglar_toplu_ekle(sirket_id, kaynak_id, kayitlar):
+    """Ayrıştırılmış kayıtları TEK işlemde ekler, eklenen sayıyı döndürür.
+
+    Önce kaynağın bu şirkete ait olduğu kontrol edilir.
+    Bir satır bile eklenemezse hiçbiri eklenmez (rollback).
+    """
+    with _oturum() as cur:
+        sahip = cur.execute(
+            "SELECT 1 FROM kaynak WHERE id = ? AND sirket_id = ?",
+            kaynak_id, sirket_id).fetchone()
+        if sahip is None:
+            raise ValueError("Bu kaynak bu şirkete ait değil.")
+        if not kayitlar:
+            return 0
+        cur.executemany(
+            "INSERT INTO log_kaydi "
+            "(sirket_id, kaynak_id, zaman, ip_adresi, kullanici_adi, durum, ham_metin) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [(sirket_id, kaynak_id, k["zaman"], k["ip_adresi"],
+              k["kullanici_adi"], k["durum"], k["ham_metin"]) for k in kayitlar])
+        return len(kayitlar)
