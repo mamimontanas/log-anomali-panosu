@@ -7,7 +7,7 @@ gösteren ve uyarı üreten çok şirketli bir web uygulamasıdır.
 > **Ders:** Bilgisayar Uygulamaları I (Proje Tabanlı Ders)
 > **Proje:** P27, Günlük (Log) Anomali İzleme Panosu
 > **Geliştirici:** Muhammed Berkin Tanas
-> **Durum:** Geliştirme aşamasında. Şu an **Hafta 3** çalışmaları tamamlanmış, Hafta 4 başlamak üzere.
+> **Durum:** Geliştirme aşamasında. Hafta 3-7 tamamlandı: veritabanı, giriş ve roller, log içe aktarma ve anomali kuralları çalışıyor. Sırada Hafta 8 (vize).
 
 ---
 
@@ -91,11 +91,14 @@ taşır. Her sorguda bu alana göre filtre uygulanır.
 ├── docs/
 │   ├── er_diyagrami.svg        # ER diyagramı
 │   ├── mimari_sema.svg         # Mimari şema
-│   ├── pano_demo.html          # Prototip ekran (sentetik veri)
-│   └── ai_kullanim_gunlugu.md  # Yapay zekâ kullanım günlüğü
+│   └── pano_demo.html          # İlk tasarım prototipi (sentetik veri)
+├── raporlar/
+│   └── Hafta-N/                # Haftalık ilerleme raporu ve AI kullanım günlüğü (Word)
+├── sample_logs/                # Sentetik örnek log dosyaları
 ├── sql/
-│   └── 01_tablolar.sql         # Tabloları oluşturan script
-├── tests/                      # Testler (ilerleyen haftalarda)
+│   ├── 01_tablolar.sql         # Tabloları oluşturan script
+│   └── 02_anomali_aciklama.sql # Migration: anomali açıklama kolonu
+├── tests/                      # pytest testleri
 ├── .env.example                # Ortam değişkenleri şablonu
 ├── .gitignore
 ├── requirements.txt
@@ -155,7 +158,7 @@ DB_TRUSTED=yes
 ```
 `.env` dosyası GitHub'a yüklenmez, parola ve bağlantı bilgisi içerebilir.
 
-**5. Bağlantıyı test edin** *(Hafta 4'te eklenecek)*
+**5. Bağlantıyı test edin**
 ```bash
 python -m app.data.db
 ```
@@ -171,11 +174,11 @@ veritabanına bağlı değildir. İki örnek şirketle çok şirketli yapıyı g
 | Hafta | Konu | Durum |
 |---|---|---|
 | 3 | Kurulum, mimari, ER diyagramı | Tamamlandı |
-| 4 | Veritabanı ve veri erişim katmanı (CRUD, sentetik veri) | Sırada |
-| 5 | Kullanıcı yönetimi ve kimlik doğrulama | Planlandı |
-| 6 | Log içe aktarma ve ayrıştırma | Planlandı |
-| 7 | Anomali tespit kuralları | Planlandı |
-| 8 | Vize: ara sürüm ve demo | Planlandı |
+| 4 | Veritabanı ve veri erişim katmanı (CRUD, sentetik veri) | Tamamlandı |
+| 5 | Kullanıcı yönetimi ve kimlik doğrulama | Tamamlandı |
+| 6 | Log içe aktarma ve ayrıştırma | Tamamlandı |
+| 7 | Anomali tespit kuralları | Tamamlandı |
+| 8 | Vize: ara sürüm ve demo | Sırada |
 | 9 | Harici API entegrasyonu | Planlandı |
 | 10 | Yapay zekâ bileşeni | Planlandı |
 | 11 | Kural editörü | Planlandı |
@@ -187,7 +190,7 @@ veritabanına bağlı değildir. İki örnek şirketle çok şirketli yapıyı g
 ## 10. Güvenlik ve veri gizliliği
 
 - **Gerçek kişisel veri kullanılmaz.** Tüm log verileri sentetik olarak üretilir (KVKK uyumu).
-- Parolalar düz metin saklanmaz, hash'lenir (Hafta 5).
+- Parolalar düz metin saklanmaz, bcrypt ile tuzlanıp hash'lenir.
 - Gizli bilgiler (`.env`, API anahtarları) depoya yüklenmez.
 - Şirketler arası veri izolasyonu her sorguda `sirket_id` filtresiyle sağlanır.
 
@@ -195,7 +198,7 @@ veritabanına bağlı değildir. İki örnek şirketle çok şirketli yapıyı g
 
 Bu projede yapay zekâ araçlarından yararlanılmıştır. Her kullanımın tarihi, aracı,
 istemi, çıktısı ve geliştiricinin kendi katkısı
-[`docs/ai_kullanim_gunlugu.md`](docs/ai_kullanim_gunlugu.md) dosyasında kayıtlıdır.
+[`raporlar/`](raporlar) klasöründeki haftalık AI Kullanım Günlüğü (Word) dosyalarında kayıtlıdır.
 Projedeki kodlar geliştirici tarafından incelenmiş, çalıştırılmış ve anlaşılmıştır.
 
 ## 12. Lisans ve kullanım

@@ -1,0 +1,10 @@
+2026-10-23 09:40:01 auth basarili user=ayse.k ip=192.0.2.31
+2026-10-23 09:41:15 auth basarisiz user=admin ip=203.0.113.45
+2026-10-23 09:41:40 auth basarisiz user=root ip=203.0.113.45
+2026-10-23 09:42:05 auth basarisiz user=admin ip=203.0.113.45
+2026-10-23 09:42:30 auth basarisiz user=test ip=203.0.113.45
+2026-10-23 09:42:55 auth basarisiz user=admin ip=203.0.113.45
+2026-10-23 09:43:10 auth basarili user=mehmet.t ip=192.0.2.18
+bu satir bozuk
+2026-10-23 09:44:00 auth belki user=can.y ip=192.0.2.14
+2026-10-23 09:45:20 auth basarili user=can.y ip=999.1.1.1
