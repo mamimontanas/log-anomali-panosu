@@ -3,6 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>Pano - Gözcü</title>
+  <style>
+    .onem { padding: 2px 8px; border-radius: 10px; color: #fff; font-weight: bold; font-size: 13px; }
+    .yuksek { background: #C8283D; }
+    .orta   { background: #B87700; }
+    .dusuk  { background: #1F7A6D; }
+  </style>
 </head>
 <body>
   <h1>Pano</h1>
@@ -12,6 +18,27 @@
   {% endfor %}
 
   <p>Hoş geldin, {{ session.kullanici_adi }} ({{ session.rol }})</p>
+
+  <h2>Uyarılar</h2>
+  <form method="post" action="/tarama">
+    <button type="submit">Kuralları şimdi çalıştır</button>
+  </form>
+  {% if anomaliler %}
+    <table border="1" cellpadding="4">
+      <tr><th>Önem</th><th>Olay zamanı</th><th>IP</th><th>Kural</th><th>Açıklama</th></tr>
+      {% for a in anomaliler %}
+        <tr>
+          <td><span class="onem {{ a.onem }}">{{ a.onem }}</span></td>
+          <td>{{ a.olay_zamani }}</td>
+          <td>{{ a.ip_adresi }}</td>
+          <td>{{ a.kural }}</td>
+          <td>{{ a.aciklama }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  {% else %}
+    <p>Henüz anomali yok.</p>
+  {% endif %}
 
   <h2>Son giriş kayıtları</h2>
   {% if loglar %}
@@ -26,7 +53,7 @@
   {% endif %}
 
   {% if session.rol == "yonetici" %}<p><a href="/yonetim">Kural yönetimi</a></p>{% endif %}
-    <p><a href="/log-yukle">Log dosyası yükle</a></p>
+  <p><a href="/log-yukle">Log dosyası yükle</a></p>
   <p><a href="/cikis">Çıkış yap</a></p>
 </body>
 </html>

@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, request, session, url_for
 
+from app.business.anomali_servisi import anomali_taramasi
 from app.business.auth import parola_dogrula, parola_hashle
 from app.business.log_parser import dosya_ayristir
 from app.data import crud
@@ -66,8 +67,20 @@ def pano():
     if "kullanici_id" not in session:
         flash("Önce giriş yapın.")
         return redirect(url_for("giris"))
-    loglar = crud.son_loglar(session["sirket_id"], adet=10)
-    return render_template("pano.html", loglar=loglar)
+    sirket_id = session["sirket_id"]
+    loglar = crud.son_loglar(sirket_id, adet=10)
+    anomaliler = crud.anomalileri_getir(sirket_id, adet=20)
+    return render_template("pano.html", loglar=loglar, anomaliler=anomaliler)
+
+
+@app.route("/tarama", methods=["POST"])
+def tarama():
+    if "kullanici_id" not in session:
+        flash("Önce giriş yapın.")
+        return redirect(url_for("giris"))
+    bulgu, yeni = anomali_taramasi(session["sirket_id"])
+    flash(f"Tarama tamamlandı: {bulgu} bulgu, {yeni} yeni anomali.")
+    return redirect(url_for("pano"))
 
 
 @app.route("/yonetim")
@@ -109,8 +122,12 @@ def log_yukle():
                     kaynak_id = crud.kaynak_ekle(sirket_id, yeni_kaynak)
                 kayitlar, hatalar = dosya_ayristir(icerik.splitlines())
                 eklenen, tekrar = crud.loglar_toplu_ekle(sirket_id, int(kaynak_id), kayitlar)
-                flash(f"{eklenen} kayıt eklendi, {tekrar} tekrar kayıt atlandı, "
-                      f"{len(hatalar)} hatalı satır atlandı.")
+                mesaj = (f"{eklenen} kayıt eklendi, {tekrar} tekrar kayıt atlandı, "
+                         f"{len(hatalar)} hatalı satır atlandı.")
+                if eklenen:
+                    _, yeni_anomali = anomali_taramasi(sirket_id)
+                    mesaj += f" {yeni_anomali} yeni anomali tespit edildi."
+                flash(mesaj)
             except UnicodeDecodeError:
                 flash("Dosya UTF-8 metin dosyası olmalı.")
             except ValueError as hata:

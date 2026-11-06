@@ -30,13 +30,14 @@ def _sql(sql, *params):
 def kullanicilar():
     ek = uuid.uuid4().hex[:8]
     yon, ana, sirket = f"test_yon_{ek}", f"test_ana_{ek}", f"Test Şirketi {ek}"
-    crud.sirket_ve_yonetici_ekle(sirket, yon, parola_hashle(PAROLA))
+    sirket_id = crud.sirket_ve_yonetici_ekle(sirket, yon, parola_hashle(PAROLA))
     _sql("INSERT INTO kullanici (sirket_id, kullanici_adi, parola_hash, rol) "
-         "SELECT sirket_id, ?, ?, 'analist' FROM kullanici WHERE kullanici_adi = ?",
-         ana, parola_hashle(PAROLA), yon)
+         "VALUES (?, ?, ?, 'analist')", sirket_id, ana, parola_hashle(PAROLA))
     yield {"yonetici": yon, "analist": ana}
-    _sql("DELETE FROM kullanici WHERE kullanici_adi IN (?, ?)", yon, ana)
-    _sql("DELETE FROM sirket WHERE ad = ?", sirket)
+    # Silme sırası: önce şirkete bağlı kayıtlar, en son şirket
+    _sql("DELETE FROM kural WHERE sirket_id = ?", sirket_id)
+    _sql("DELETE FROM kullanici WHERE sirket_id = ?", sirket_id)
+    _sql("DELETE FROM sirket WHERE id = ?", sirket_id)
 
 
 @pytest.fixture

@@ -15,6 +15,14 @@ from app.data.db import get_connection
 
 GECERLI_DURUMLAR = ("basarili", "basarisiz")
 
+# Yeni kayıt olan her şirkete otomatik eklenen kurallar: (ad, tür, eşik, pencere_dk)
+VARSAYILAN_KURALLAR = [
+    ("Çok sayıda başarısız giriş", "cok_basarisiz_giris", 5, 10),
+    ("Çok sayıda kullanıcı adı denemesi", "cok_kullanici_denemesi", 5, 15),
+    ("Başarısızlıktan sonra başarılı giriş", "basarisizdan_basariya", 5, 30),
+    ("Mesai dışı giriş", "mesai_disi", None, None),
+]
+
 
 @contextmanager
 def _oturum():
@@ -164,9 +172,9 @@ def kural_sil(sirket_id, kural_id):
 # ====================== KULLANICI ======================
 
 def sirket_ve_yonetici_ekle(sirket_adi, kullanici_adi, parola_hash):
-    """Yeni şirketi ve yöneticisini AYNI işlemde ekler.
+    """Yeni şirketi, yöneticisini ve varsayılan kurallarını AYNI işlemde ekler.
 
-    Biri başarısız olursa ikisi de geri alınır (sahipsiz şirket kalmaz).
+    Biri başarısız olursa hepsi geri alınır (sahipsiz şirket kalmaz).
     """
     try:
         with _oturum() as cur:
@@ -177,6 +185,10 @@ def sirket_ve_yonetici_ekle(sirket_adi, kullanici_adi, parola_hash):
                 "INSERT INTO kullanici (sirket_id, kullanici_adi, parola_hash, rol) "
                 "VALUES (?, ?, ?, 'yonetici')",
                 sirket_id, kullanici_adi, parola_hash)
+            cur.executemany(
+                "INSERT INTO kural (sirket_id, ad, kural_turu, esik, pencere_dk) "
+                "VALUES (?, ?, ?, ?, ?)",
+                [(sirket_id, ad, tur, esik, pencere) for ad, tur, esik, pencere in VARSAYILAN_KURALLAR])
             return sirket_id
     except pyodbc.IntegrityError:
         raise ValueError("Bu şirket adı veya kullanıcı adı zaten kayıtlı.")
@@ -256,3 +268,70 @@ def loglar_toplu_ekle(sirket_id, kaynak_id, kayitlar):
                 [(sirket_id, kaynak_id, k["zaman"], k["ip_adresi"],
                   k["kullanici_adi"], k["durum"], k["ham_metin"]) for k in yeniler])
         return len(yeniler), len(kayitlar) - len(yeniler)
+
+
+# ====================== ANOMALİ ======================
+
+def loglari_getir(sirket_id):
+    """Kural motoru için şirketin tüm giriş kayıtlarını zamana göre sıralı döndürür."""
+    sql = """
+        SELECT id, zaman, ip_adresi, kullanici_adi, durum
+        FROM log_kaydi
+        WHERE sirket_id = ?
+        ORDER BY zaman
+    """
+    with _oturum() as cur:
+        cur.execute(sql, sirket_id)
+        return _sozluk_listesi(cur)
+
+
+def anomalileri_kaydet(sirket_id, bulgular):
+    """Kural motorunun bulgularını anomali, anomali_log ve uyari tablolarına
+    TEK işlemde yazar. Dönen değer: yeni kaydedilen anomali sayısı.
+
+    İş kuralı: bir bulgunun kanıt log kayıtlarından biri, AYNI kural tarafından
+    zaten bir anomaliye bağlanmışsa o bulgu tekrar kaydedilmez. Böylece tarama
+    her çalıştığında aynı saldırı için yeni uyarı üretilmez.
+    """
+    if not bulgular:
+        return 0
+    with _oturum() as cur:
+        cur.execute(
+            "SELECT a.kural_id, al.log_id FROM anomali a "
+            "JOIN anomali_log al ON al.anomali_id = a.id "
+            "WHERE a.sirket_id = ?", sirket_id)
+        kullanilmis = {(satir[0], satir[1]) for satir in cur.fetchall()}
+
+        yeni = 0
+        for b in bulgular:
+            if any((b["kural_id"], log_id) in kullanilmis for log_id in b["log_idler"]):
+                continue
+            anomali_id = cur.execute(
+                "INSERT INTO anomali (sirket_id, kural_id, ip_adresi, onem, aciklama) "
+                "OUTPUT INSERTED.id VALUES (?, ?, ?, ?, ?)",
+                sirket_id, b["kural_id"], b["ip_adresi"], b["onem"], b["aciklama"]).fetchone()[0]
+            cur.executemany(
+                "INSERT INTO anomali_log (anomali_id, log_id) VALUES (?, ?)",
+                [(anomali_id, log_id) for log_id in b["log_idler"]])
+            cur.execute("INSERT INTO uyari (anomali_id, kanal) VALUES (?, 'panel')", anomali_id)
+            kullanilmis.update((b["kural_id"], log_id) for log_id in b["log_idler"])
+            yeni += 1
+        return yeni
+
+
+def anomalileri_getir(sirket_id, adet=20):
+    """Şirketin anomalilerini önem sırasına göre döndürür (önce yüksek)."""
+    sql = """
+        SELECT TOP (?) a.id, a.ip_adresi, a.onem, a.aciklama, k.ad AS kural,
+               (SELECT MIN(l.zaman)
+                  FROM anomali_log al
+                  JOIN log_kaydi l ON l.id = al.log_id
+                 WHERE al.anomali_id = a.id) AS olay_zamani
+        FROM anomali a
+        JOIN kural k ON k.id = a.kural_id
+        WHERE a.sirket_id = ?
+        ORDER BY CASE a.onem WHEN 'yuksek' THEN 0 WHEN 'orta' THEN 1 ELSE 2 END, a.id DESC
+    """
+    with _oturum() as cur:
+        cur.execute(sql, adet, sirket_id)
+        return _sozluk_listesi(cur)
