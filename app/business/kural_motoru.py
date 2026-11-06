@@ -116,6 +116,27 @@ def mesai_disi_bul(loglar, baslangic=MESAI_BASLANGIC, bitis=MESAI_BITIS):
     ]
 
 
+def onem_belirle(kural_turu, log_sayisi):
+    """Bulgunun önem derecesini döndürür: 'dusuk', 'orta' veya 'yuksek'.
+
+    İş kuralı:
+    - Başarısızlıktan sonra başarılı giriş: yüksek (saldırgan içeri girmiş olabilir)
+    - Çok başarısız giriş, 10 ve üzeri deneme: yüksek (yoğun saldırı)
+    - Çok başarısız giriş, 10'dan az: orta
+    - Çok kullanıcı adı denemesi: orta (hesap taraması)
+    - Diğerleri (mesai dışı): düşük
+    """
+    if kural_turu == "basarisizdan_basariya":
+        return "yuksek"
+    if kural_turu == "cok_basarisiz_giris" and log_sayisi >= 10:
+        return "yuksek"
+    if kural_turu == "cok_basarisiz_giris":
+        return "orta"
+    if kural_turu == "cok_kullanici_denemesi":
+        return "orta"
+    return "dusuk"
+
+
 KURAL_FONKSIYONLARI = {
     "cok_basarisiz_giris": cok_basarisiz_giris_bul,
     "cok_kullanici_denemesi": cok_kullanici_denemesi_bul,
@@ -143,5 +164,6 @@ def kurallari_uygula(loglar, kurallar):
             b["kural_id"] = kural["id"]
             b["kural_adi"] = kural["ad"]
             b.setdefault("aciklama", f"{len(b['log_idler'])} başarısız giriş")
+            b["onem"] = onem_belirle(tur, len(b["log_idler"]))
             sonuc.append(b)
     return sonuc

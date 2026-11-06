@@ -14,4 +14,4 @@ kurallar = [
 ]
 
 for b in kurallari_uygula(kayitlar, kurallar):
-    print(f"{b['kural_adi']:<38} {b['ip_adresi']:<15} {b['aciklama']}")
+    print(f"{b['onem']:<7} {b['kural_adi']:<38} {b['ip_adresi']:<15} {b['aciklama']}")
